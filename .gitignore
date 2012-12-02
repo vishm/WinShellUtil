@@ -1,0 +1,6 @@
+ WinShellUtil.opensdf
+ WinShellUtil.sdf
+ Debug/
+ ipch/
+ Release/
+ TestResults/
