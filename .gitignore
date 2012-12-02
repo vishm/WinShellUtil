@@ -1,6 +1,7 @@
- WinShellUtil.opensdf
- WinShellUtil.sdf
- Debug/
- ipch/
- Release/
- TestResults/
+WinShellUtil.opensdf
+WinShellUtil.sdf
+Debug/
+ipch/
+Release/
+TestResults/
+*.v11.suo
