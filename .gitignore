@@ -5,4 +5,4 @@ ipch/
 Release/
 TestResults/
 *.v11.suo
-*.vcxproj.user
+WinShellUtil/*.vcxproj.user

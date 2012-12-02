@@ -17,6 +17,8 @@
 #include <atlstr.h>
 
 #include <iostream>
+#include <algorithm>
+#include <sstream>
 
 // TODO: reference additional headers your program requires here
 #include <Shobjidl.h>

@@ -1,6 +1,36 @@
 #include "stdafx.h"
-#include <algorithm>
 #include "WinLibManager.h"
+
+#define HR(x) { HRESULT _hrTemp0002 = x; if ( FAILED(_hrTemp0002) ) throw hr_exception(_hrTemp0002); }
+
+class hr_exception : public std::exception
+{
+	HRESULT m_hresult;
+	std::string m_errorString;
+
+public:
+	hr_exception(HRESULT hr) : std::exception()
+	{
+		m_hresult = hr;
+	}
+
+	hr_exception(LPCTSTR message, HRESULT hr) : std::exception()
+	{
+		m_hresult = hr;
+		m_errorString = CT2A(message);
+	}
+
+	HRESULT GetHRESULT()
+	{
+		return m_hresult;		
+	}
+
+	virtual const char *what() const
+	{
+		return m_errorString.c_str();
+	}
+	
+};
 
 WinLibManager::WinLibManager(void)
 {
@@ -11,75 +41,47 @@ WinLibManager::~WinLibManager(void)
 {
 }
 
-
-void WinLibManager::ExecuteCommand(int argc, _TCHAR* argv[])
-{
-	if ( !(argc > 1) )
-	{
-		ShowHelp();
-	}
-	else
-	{
-		std::wstring command = CT2W(argv[1]);
-		std::transform( std::begin(command), std::end(command), std::begin(command), ::toupper);
-		
-		if ( command.compare(L"LIST") == 0 )
-		{
-			std::wstring libraryName = CT2W(argv[2]);
-			std::wstring folderName = CT2W(argv[3]);
-
-			ListKnownFolder();
-		} else if ( command.compare(L"ADDFOLDER") == 0 )
-		{
-			std::wstring libraryName = CT2W(argv[2]);
-			std::wstring folderName = CT2W(argv[3]);
-
-			AddFolder(libraryName, folderName);
-		}
-	}
-}
-
 void WinLibManager::AddFolder(std::wstring libraryName, std::wstring folderPath)
 {
+
 	// APIs access the real library name as exists on file system as described below
 	// http://msdn.microsoft.com/en-us/library/windows/desktop/dd798389(v=vs.85).aspx
-	
+	const LPWSTR LIBRARYNAME_EXT = L".library-ms";
 	std::wstring realLibraryName(libraryName);
-	realLibraryName += std::wstring(L".library-ms");
+	realLibraryName += std::wstring(LIBRARYNAME_EXT);
 
-	// Aim to get relevant library
-	CComPtr<IShellItem2> ptrShellItem;
-	HRESULT hr = ::SHCreateItemInKnownFolder(FOLDERID_UsersLibraries, KF_FLAG_DEFAULT_PATH|KF_FLAG_NO_ALIAS, 
-		realLibraryName.c_str(), IID_PPV_ARGS(&ptrShellItem));
-
-	// Now lets add folder path to library collection
-	if ( SUCCEEDED(hr) )
+	if ( !::PathFileExists(folderPath.c_str()) )
 	{
-		CComPtr<IShellLibrary> ptrShellLibrary;
-		hr = ::SHLoadLibraryFromItem(ptrShellItem, STGM_READWRITE, IID_PPV_ARGS(&ptrShellLibrary));
-
-		if ( SUCCEEDED(hr) )
-		{
-			std::wstring operationResult(L"Failure");
-			hr = ::SHAddFolderPathToLibrary(ptrShellLibrary, folderPath.c_str());
-			if ( SUCCEEDED(hr) ) 
-			{
-				hr = ptrShellLibrary->Commit();
-				operationResult = L"Success: ";
-			}
-
-			std::wcout << operationResult.c_str() << L"Adding folder \"" << folderPath.c_str() << L"\" Library \"" << libraryName.c_str() << "\"" << std::endl;
-		}
+		std::wstringstream errMsg;
+		errMsg << "\"" << libraryName << "\" will not be updated as "<< L"\"" << folderPath << L"\"" << L" was not found";
+		CW2A errString(errMsg.str().c_str());
+		throw std::exception(errString);
 	}
 
+	try
+	{
+		// Aim to get relevant library
+		CComPtr<IShellItem2> ptrShellItem;
+		HR( ::SHCreateItemInKnownFolder(FOLDERID_UsersLibraries, KF_FLAG_DEFAULT_PATH|KF_FLAG_NO_ALIAS, 
+			realLibraryName.c_str(), IID_PPV_ARGS(&ptrShellItem)) );
+		
+		// Now lets add folder path to library collection	
+		CComPtr<IShellLibrary> ptrShellLibrary;
+		HR( ::SHLoadLibraryFromItem(ptrShellItem, STGM_READWRITE, IID_PPV_ARGS(&ptrShellLibrary)) );
+	
+		HR( ::SHAddFolderPathToLibrary(ptrShellLibrary, folderPath.c_str()) );
+		HR( ptrShellLibrary->Commit() );		
+	}
+	catch(hr_exception& e)
+	{
+		std::wstringstream errMsg;
+		errMsg << L"Failure to AddFolder \"" << folderPath.c_str() << "\" to library " << "\"" << libraryName << "\"" << std::endl;
+		CW2T errMessage(errMsg.str().c_str());
 
+		throw hr_exception(errMessage, e.GetHRESULT());
+	}
 }
 
 void WinLibManager::ListKnownFolder()
 {
-}
-
-void WinLibManager::ShowHelp()
-{
-	std::cout << "help" << std::endl;
 }
