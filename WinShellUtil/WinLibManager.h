@@ -1,14 +1,18 @@
 #pragma once
+
+
+
+/// Simple class that manages all interactions with Windows Library and aims to
+/// offer high level functionality
 class WinLibManager
-{
+{	
+public:		
+	void AddFolder(const std::wstring& strLibraryName, const std::wstring& strFolderPath);
+	void RemoveFolder(const std::wstring& strLibraryName, const std::wstring& strFolderPath);
+	void AddRemoveFolder(const std::wstring& strLibraryName, const std::wstring& strFolderPath, bool bAddFolder = true);
 
-public:
-	WinLibManager(void);
-	~WinLibManager(void);
-	
-	void ListKnownFolder();
-	void AddFolder(std::wstring libraryName, std::wstring folderPath);
 
+	// store for tracking bad HRESULT that are raised.
 	class hr_exception : public std::exception
 	{
 		HRESULT m_hresult;
